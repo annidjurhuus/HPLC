@@ -1,0 +1,120 @@
+---
+title: "HPLC"
+author: "Anni Djurhuus"
+date: "24 January 2017"
+output: html_document
+---
+
+### Analysis of HPLC data for Enrique
+
+```{r Reading in data, echo=FALSE}
+require(RColorBrewer)
+#display.brewer.pal(9,"Set1")
+#brewer.pal(9,"Set1")
+mypalette <- brewer.pal(9,"Set1")
+#display.brewer.all ()
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+aph <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/aph.csv", header=TRUE)
+aph <- aph[2:401]
+hydro <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/hydro.csv", header=TRUE, stringsAsFactors=F, colClasses = c("round_avg_seascape"="factor"))
+pigments <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/all_pigments.csv", header=TRUE)
+aph_hydro <- cbind(aph,hydro)
+pig_hydro <- cbind(pigments,hydro)
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+###Generalized Linear Model
+```{r, message=FALSE, warning=FALSE}
+library(ade4)
+lmfit = glm(aph~hydro$USF_Chl_a+hydro$NH4+hydro$PO4+hydro$NO3_NO2+hydro$NO3+hydro$NO2+hydro$Si+hydro$round_avg_seascape)
+dudi.pca()
+s.class(deug.dudi$li, deug$result, cpoint = 1)
+
+```
+
+#### Ordination plots
+
+```{r pressure, echo=FALSE, message=FALSE, warning=FALSE}
+library(vegan)
+library(ggplot2)
+library(ape)
+library(cluster)
+#if (!require('dendextend')) install.packages('dendextend'); library('dendextend')
+
+#dist=vegdist(pigments[,2:26], method="euclidean")
+#clust.res=hclust(dist, method="complete")
+#plot(clust.res, col=cbPalette[as.factor(aph_hydro$round_avg_seascape)],labels=aph_hydro$Station, hang=-1, #cex=0.5, main=NULL, xlab="Sample") #or use labels=n if 
+
+#dist <- diana(pigments[,2:26], metric="euclidean")
+#p <- as.phylo(as.hclust(dist, method="average"))
+
+dist <- as.phylo(as.hclust(diana(pigments[,2:26], metric="euclidean"), "ave"))
+plot(dist, cex=0.75,direct='down',font=1, adj=0.0, sub="")
+tiplabels(col=cbPalette[as.factor(pig_hydro$round_avg_seascape)], cex=2)
+
+#tiplabels(hydro$Station, col=cbPalette[pig_hydro$round_avg_seascape])
+
+plot(p, cex=0.75,label.offset=300,direct='down',font=1, adj=0.0, sub="")
+# add in the dated surface type via color
+tiplabels(col=mypalette[as.numeric(deep_vent_meta$vent)],bg=mypalette[as.numeric(deep_vent_meta$vent)],pch=c(25,15,17,18,16)[as.factor(deep_vent_meta$vent)], cex=2)
+
+
+```
+
+```{r ordination, echo=FALSE, message=FALSE, warning=FALSE}
+
+nmds_aph <- metaMDS(aph, distance="bray", trace = FALSE, trymax=100) 
+d_aph <- vegdist(datasheet_binary_nmds) # Bray-Curtis distances between the rows
+#nmds_12s <- metaMDS(d_12s, k=2) # k is the number of dim
+xbac_12s <- nmds_12s$points[,1]
+ybac_12s <- nmds_12s$points[,2]
+plot(xbac_12s, ybac_12s, xlab="Coordinate 1",ylab="Coordinate 2",main="12S", col=c(cbPalette[datasheet_binary$filter_type]), pch=c(15,16,17,15)[datasheet_binary$extraction_method])
+legend("bottomright",ncol=2, legend=c("GFF", "NC", "PCTE","PES", "PVDF","MoBio","DNeasy","PC","",""), cex=0.9,col=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442","black","black","black","white","white"),pch=c(16,16,16,16,16,1,2,0,2,0))
+```
+
+```{r, message=FALSE, warning=FALSE}
+
+
+deug.dudi <- dudi.pca(aph_hydro[2:400], center = TRUE, scale = TRUE, scan = FALSE)
+g1 <- s.class(deug.dudi$li, aph_hydro$round_avg_seascape)
+g2 <- s.arrow(deug.dudi$c1, lab = names(aph_hydro[,400:416]))
+
+
+    
+  G1 <- rbindADEg(cbindADEg(g1, g2, plot = FALSE), cbindADEg(g3, g4, plot = FALSE), plot = TRUE)
+  
+  G2 <- s1d.hist(deug.dudi$tab, breaks = seq(-45, 35, by = 5), type = "density", xlim = c(-40, 40), 
+    right = FALSE, ylim = c(0, 0.1), porigin.lwd = 2)
+    
+} else {
+  par(mfrow = c(2, 2))
+  s.class(deug.dudi$li, deug$result, cpoint = 1)
+  s.arrow(deug.dudi$c1, lab = names(deug$tab))
+  s.class(deug.dudi1$li, deug$result, cpoint = 1)
+  s.corcircle(deug.dudi1$co, lab = names(deug$tab), full = FALSE, box = TRUE)
+  par(mfrow = c(1, 1))
+
+  # for interpretations
+  par(mfrow = c(3, 3))
+  par(mar = c(2.1, 2.1, 2.1, 1.1))
+  for(i in 1:9) {
+    hist(deug.dudi$tab[,i], xlim = c(-40, 40), breaks = seq(-45, 35, by = 5), 
+      prob = TRUE, right = FALSE, main = names(deug$tab)[i], xlab = "", ylim = c(0, 0.10))
+  abline(v = 0, lwd = 3)
+  }
+  par(mfrow = c(1, 1))
+}
+
+```
+
+
+Console~/Documents/Projects/FK_HPLC/HPLC/
+			
+Console
+R Markdown
+	
+~/Documents/Projects/FK_HPLC/HPLC/	
+			
