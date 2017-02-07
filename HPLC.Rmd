@@ -2,119 +2,133 @@
 title: "HPLC"
 author: "Anni Djurhuus"
 date: "24 January 2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
 ---
 
-### Analysis of HPLC data for Enrique
+# Analysis of HPLC data for Enrique
 
-```{r Reading in data, echo=FALSE}
+```{r Reading in data, echo=FALSE,message=FALSE, warning=FALSE}
 require(RColorBrewer)
 #display.brewer.pal(9,"Set1")
 #brewer.pal(9,"Set1")
 mypalette <- brewer.pal(9,"Set1")
+mypalette2 <- c("#999999", "#E41A1C", "#377EB8", "#4DAF4A")
 #display.brewer.all ()
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-
-aph <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/aph.csv", header=TRUE)
-aph <- aph[2:401]
-hydro <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/hydro.csv", header=TRUE, stringsAsFactors=F, colClasses = c("round_avg_seascape"="factor"))
-pigments <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/all_pigments.csv", header=TRUE)
+aph <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/aph.csv", header=TRUE, row.names = 1)
+hydro <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/hydro.csv", header=TRUE, stringsAsFactors=F, colClasses = c("round_avg_seascape"="factor"), row.names = 1)
+pigments <- read.csv(file="/Users/anni_djurhuus/Documents/Projects/FK_HPLC/all_pigments.csv", header=TRUE, row.names = 1)
 aph_hydro <- cbind(aph,hydro)
 pig_hydro <- cbind(pigments,hydro)
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 ```
 
-###Generalized Linear Model
-```{r, message=FALSE, warning=FALSE}
-library(ade4)
-lmfit = glm(aph~hydro$USF_Chl_a+hydro$NH4+hydro$PO4+hydro$NO3_NO2+hydro$NO3+hydro$NO2+hydro$Si+hydro$round_avg_seascape)
-dudi.pca()
-s.class(deug.dudi$li, deug$result, cpoint = 1)
+# Dendrograms
+For the different seascapes I used the "rounded average" of sescape assigned to a given sample. Using the sescape "median" added seascape 9, in total 5 sescapes, to the mix, but didn't really change the pattern.
 
-```
+Dendrograms were made on all pigments and all spectral data. 
 
-#### Ordination plots
 
-```{r pressure, echo=FALSE, message=FALSE, warning=FALSE}
+```{r dendrogram, echo=FALSE, message=FALSE, warning=FALSE}
 library(vegan)
 library(ggplot2)
 library(ape)
 library(cluster)
+library(dendextend)
 #if (!require('dendextend')) install.packages('dendextend'); library('dendextend')
 
-#dist=vegdist(pigments[,2:26], method="euclidean")
-#clust.res=hclust(dist, method="complete")
-#plot(clust.res, col=cbPalette[as.factor(aph_hydro$round_avg_seascape)],labels=aph_hydro$Station, hang=-1, #cex=0.5, main=NULL, xlab="Sample") #or use labels=n if 
+d_pig <- as.dendrogram(hclust(dist(pigments, method="euclidean"), "ave"))
+labels_colors(d_pig) <- mypalette2[as.factor(pig_hydro$round_avg_seascape)][order.dendrogram(d_pig)]
+plot(d_pig, main="Pigments",ylim=c(0,0.45))
+legend("topleft",legend=c("10","11","12","13"),col=c("#999999", "#E41A1C", "#377EB8", "#4DAF4A"), pch=(16),bty="n",title="Seascapes")
+```
 
-#dist <- diana(pigments[,2:26], metric="euclidean")
-#p <- as.phylo(as.hclust(dist, method="average"))
-
-dist <- as.phylo(as.hclust(diana(pigments[,2:26], metric="euclidean"), "ave"))
-plot(dist, cex=0.75,direct='down',font=1, adj=0.0, sub="")
-tiplabels(col=cbPalette[as.factor(pig_hydro$round_avg_seascape)], cex=2)
-
-#tiplabels(hydro$Station, col=cbPalette[pig_hydro$round_avg_seascape])
-
-plot(p, cex=0.75,label.offset=300,direct='down',font=1, adj=0.0, sub="")
-# add in the dated surface type via color
-tiplabels(col=mypalette[as.numeric(deep_vent_meta$vent)],bg=mypalette[as.numeric(deep_vent_meta$vent)],pch=c(25,15,17,18,16)[as.factor(deep_vent_meta$vent)], cex=2)
-
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+d_aph <- as.dendrogram(hclust(dist(aph, method="euclidean"), "ave"))
+labels_colors(d_aph) <- mypalette2[pig_hydro$round_avg_seascape][order.dendrogram(d_aph)]
+plot(d_aph, main="aph")
+legend("topright",legend=c("10","11","12","13"),col=c("#999999", "#E41A1C", "#377EB8", "#4DAF4A"), pch=(16),bty="n",title="Seascapes")
 
 ```
 
-```{r ordination, echo=FALSE, message=FALSE, warning=FALSE}
+# Ordination plots
 
-nmds_aph <- metaMDS(aph, distance="bray", trace = FALSE, trymax=100) 
-d_aph <- vegdist(datasheet_binary_nmds) # Bray-Curtis distances between the rows
-#nmds_12s <- metaMDS(d_12s, k=2) # k is the number of dim
-xbac_12s <- nmds_12s$points[,1]
-ybac_12s <- nmds_12s$points[,2]
-plot(xbac_12s, ybac_12s, xlab="Coordinate 1",ylab="Coordinate 2",main="12S", col=c(cbPalette[datasheet_binary$filter_type]), pch=c(15,16,17,15)[datasheet_binary$extraction_method])
-legend("bottomright",ncol=2, legend=c("GFF", "NC", "PCTE","PES", "PVDF","MoBio","DNeasy","PC","",""), cex=0.9,col=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442","black","black","black","white","white"),pch=c(16,16,16,16,16,1,2,0,2,0))
-```
+NMDS plots were made using the metaMDS function. Use vegdist too?? vegdist takes too long for aph.
+The ellipses are the 95% confidence interval. To test for statistical significance a permutation test was performed using the adonis function, see below. 
+The clustering clearly separates into two clusters, 10 + 11 and 12 + 13. I normalized aph data like so: Z=X-min(X)/max(X)-min(X).
 
-```{r, message=FALSE, warning=FALSE}
-
-
-deug.dudi <- dudi.pca(aph_hydro[2:400], center = TRUE, scale = TRUE, scan = FALSE)
-g1 <- s.class(deug.dudi$li, aph_hydro$round_avg_seascape)
-g2 <- s.arrow(deug.dudi$c1, lab = names(aph_hydro[,400:416]))
-
-
-    
-  G1 <- rbindADEg(cbindADEg(g1, g2, plot = FALSE), cbindADEg(g3, g4, plot = FALSE), plot = TRUE)
-  
-  G2 <- s1d.hist(deug.dudi$tab, breaks = seq(-45, 35, by = 5), type = "density", xlim = c(-40, 40), 
-    right = FALSE, ylim = c(0, 0.1), porigin.lwd = 2)
-    
-} else {
-  par(mfrow = c(2, 2))
-  s.class(deug.dudi$li, deug$result, cpoint = 1)
-  s.arrow(deug.dudi$c1, lab = names(deug$tab))
-  s.class(deug.dudi1$li, deug$result, cpoint = 1)
-  s.corcircle(deug.dudi1$co, lab = names(deug$tab), full = FALSE, box = TRUE)
-  par(mfrow = c(1, 1))
-
-  # for interpretations
-  par(mfrow = c(3, 3))
-  par(mar = c(2.1, 2.1, 2.1, 1.1))
-  for(i in 1:9) {
-    hist(deug.dudi$tab[,i], xlim = c(-40, 40), breaks = seq(-45, 35, by = 5), 
-      prob = TRUE, right = FALSE, main = names(deug$tab)[i], xlab = "", ylim = c(0, 0.10))
-  abline(v = 0, lwd = 3)
-  }
-  par(mfrow = c(1, 1))
-}
-
+```{r ordination, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
+pigments <- log(pigments+1)
+nmds_pig <- metaMDS(pigments, distance="euclidean", trace = FALSE, trymax=100) 
+#d_aph <- vegdist(nmds_aph) # Bray-Curtis distances between the rows
+xbac_pig <- nmds_pig$points[,1]
+ybac_pig <- nmds_pig$points[,2]
+plot(xbac_pig, ybac_pig, xlab="Coordinate 1",ylim=c(-0.2,0.2),ylab="Coordinate 2",main="Pigments",pch=16,cex=1.5,col=c(mypalette2[hydro$round_avg_seascape]))
+ordiellipse(nmds_pig, hydro$round_avg_seascape, kind="se", conf=0.95,lwd=1, lty=2,col="#999999", draw=c("lines"),show.groups = "10", alpha=100, border="NA")
+ordiellipse(nmds_pig, hydro$round_avg_seascape, kind="se", conf=0.95,lwd=1, lty=2,col="#377EB8", draw=c("lines"),show.groups = "12", alpha=100, border="NA")
+ordiellipse(nmds_pig, hydro$round_avg_seascape, kind="se", conf=0.95,lwd=1, lty=2,col="#4DAF4A", draw=c("lines"),show.groups = "13", alpha=100, border="NA")
+legend("topleft",ncol=1, legend=c("10", "11", "12","13"), cex=0.9,pch=19,col=c("#999999", "#E41A1C", "#377EB8", "#4DAF4A"))
+adonis_pig = adonis2(pigments ~ hydro$round_avg_seascape)
+adonis_pig
 ```
 
 
-Console~/Documents/Projects/FK_HPLC/HPLC/
-			
-Console
-R Markdown
-	
-~/Documents/Projects/FK_HPLC/HPLC/	
-			
+```{r, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
+aph2 <- (aph-min(aph))/(max(aph)-min(aph))
+nmds_aph <- metaMDS(aph2, distance="euclidean", trace = FALSE, trymax=100) 
+#d_aph <- vegdist(nmds_aph) # Bray-Curtis distances between the rows
+xbac_aph <- nmds_aph$points[,1]
+ybac_aph <- nmds_aph$points[,2]
+plot(xbac_aph, ybac_aph, xlab="Coordinate 1",ylab="Coordinate 2",main="aph",pch=19,cex=1.5,col=c(mypalette2[hydro$round_avg_seascape]))
+legend("bottomright",ncol=1, legend=c("10", "11", "12","13"), cex=0.9,pch=19,col=c("#999999", "#E41A1C", "#377EB8", "#4DAF4A"))
+ordiellipse(nmds_aph, hydro$round_avg_seascape, kind="se", conf=0.95,lwd=1, lty=2,col="#999999", draw=c("lines"),show.groups = "10", alpha=100, border="NA")
+ordiellipse(nmds_aph, hydro$round_avg_seascape, kind="se", conf=0.95,lwd=1, lty=2,col="#377EB8", draw=c("lines"),show.groups = "12", alpha=100, border="NA")
+ordiellipse(nmds_aph, hydro$round_avg_seascape, kind="se", conf=0.95,lwd=1, lty=2,col="#4DAF4A", draw=c("lines"),show.groups = "13", alpha=100, border="NA")
+legend("bottomright",ncol=1, legend=c("10", "11", "12","13"), cex=0.9,pch=19,col=c("#999999", "#E41A1C", "#377EB8", "#4DAF4A"))
+adonis_aph = adonis2(aph2 ~ hydro$round_avg_seascape)
+adonis_aph
+```
+
+# Community analyses with environmental drivers. 
+
+CCA plot from the environmental parameters on the community clustering from the pigments. Multiple plots including different variables: Firstly, nitrite+nitrate, Ammonia, Silicate, Salinity and Phosphate are included, secondly the same model with ammonia, nitrate+nitrite, Phosphate, and silicate. The results are not impacted by taking out on or two environmental variables. It is very clear that the higher seascapes (12, 13) are affected by higher nutrients. However, one cannot say that these communities are affected by Chlorophyll, so I would stand by the second analysis (plot 2). What do you think? first analysis explains approximately 43.4% of the variance and the second plot explains about 36%. The percentage decreases significantly when we take out more variables. 
+It is abundantly clear that Silicate and Salinity are negatively correlated. Salinity is not directly positively correlated to the oligotrophic stations, but is negatively correlated to the "fresher" stations, less so station 7, 10 and 16, than the other ones. Which makes sense.
+
+```{r, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
+RDA.pig <- cca(pigments~ hydro$USF_Chl_a+hydro$Salinity + hydro$NH4 + hydro$PO4 + hydro$NO3_NO2  + hydro$Si)
+#summary(RDA.pig)
+plot(RDA.pig, scaling=3,type="n", xlab="CCA 1",ylab="CCA 2")
+text(RDA.pig, display = "sites", scaling = 3, cex = 0.75,col = mypalette2[as.factor(hydro$round_avg_seascape)],labels=c("MR","LK","WS","7","12","10","18","16","68","65","60","58","57.3","57","55","54","53","51","49","45","41","33","31","30"))
+text(RDA.pig, display = "bp", cex=0.95,col = "black", lty=3, lwd=1.5,labels=c("Chl a","Sal","Ammonia","Phosph","Nitrate_Nitrite","Si"))
+legend("topright", legend=c("10", "11", "12","13"), cex=0.85, col=c("#999999", "#E41A1C", "#377EB8", "#4DAF4A"),pch=c(16))
+```
+
+```{r, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
+RDA.pig2 <- cca(pigments~ hydro$NH4 + hydro$PO4 + hydro$NO3_NO2  + hydro$Si + hydro$Salinity)
+#summary(RDA.pig2)
+plot(RDA.pig2, scaling=3,type="n", xlab="CCA 1",ylab="CCA 2")
+text(RDA.pig2, display = "sites", scaling = 3, cex = 0.75,col = mypalette2[as.factor(hydro$round_avg_seascape)],labels=c("MR","LK","WS","7","12","10","18","16","68","65","60","58","57.3","57","55","54","53","51","49","45","41","33","31","30"))
+text(RDA.pig2, display = "bp", cex=0.95,col = "black", lty=3, lwd=1.5,labels=c("Ammonia","Phosphate","Nitrate_Nitrite","Silicate", "Salinity"))
+legend("topright", legend=c("10", "11", "12","13"), cex=0.85, col=c("#999999", "#E41A1C", "#377EB8", "#4DAF4A"),pch=c(16))
+```
+
+
+##APH CCA analysis
+From the aph analysis we see a similar clustering as the pigments analyses. However, the salinity is more correlated with the oligotrophic stations and negatively correlated with the silicate. 49.2% of the variance is explained here.
+
+```{r, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
+RDA.aph <- cca(aph2~ hydro$Salinity + hydro$NH4 + hydro$PO4 + hydro$NO3_NO2  + hydro$Si)
+#summary(RDA.aph)
+plot(RDA.aph, scaling=3,type="n", xlab="CCA 1",ylab="CCA 2")
+text(RDA.aph, display = "sites", scaling = 3, cex = 0.75,col = mypalette2[as.factor(hydro$round_avg_seascape)],labels=c("MR","LK","WS","7","12","10","18","16","68","65","60","58","57.3","57","55","54","53","51","49","45","41","33","31","30"))
+text(RDA.aph, display = "bp", cex=0.95,col = "black", lty=3, lwd=1.5,labels=c("Salinity","Ammonia","Phosphate","Nitrate_Nitrite","Silicate"))
+legend("topright", legend=c("10", "11", "12","13"), cex=0.85, col=c("#999999", "#E41A1C", "#377EB8", "#4DAF4A"),pch=c(16))
+```
+
+
+
