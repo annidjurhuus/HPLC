@@ -63,8 +63,11 @@ The ellipses are the 95% confidence interval. To test for statistical significan
 The clustering clearly separates into two clusters, 10 + 11 and 12 + 13. I normalized aph data like so: Z=X-min(X)/max(X)-min(X).
 
 ```{r ordination, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
+plot(hydro[,2:11])
 pigments <- log(pigments+1)
 nmds_pig <- metaMDS(pigments, distance="euclidean", trace = FALSE, trymax=100) 
+summary(nmds_pig)
+nmds_pig
 #d_aph <- vegdist(nmds_aph) # Bray-Curtis distances between the rows
 xbac_pig <- nmds_pig$points[,1]
 ybac_pig <- nmds_pig$points[,2]
