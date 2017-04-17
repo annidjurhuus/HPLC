@@ -12,6 +12,8 @@ output:
 
 ```{r Reading in data, echo=FALSE,message=FALSE, warning=FALSE}
 require(RColorBrewer)
+library(ggplot2)
+
 #display.brewer.pal(9,"Set1")
 #brewer.pal(9,"Set1")
 #mypalette <- brewer.pal(9,"Set1")
